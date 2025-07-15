@@ -3,40 +3,72 @@ import './DrumMachine.css';
 
 const DrumMachine = () => {
   const [displayText, setDisplayText] = useState('');
+  const [audioLoaded, setAudioLoaded] = useState(false);
 
-  // Audio data with the required drum sounds - using working URLs
+  // Audio data with the required drum sounds - optimized for performance
   const drumData = [
-    { key: 'Q', id: 'Heater-1', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Heater-1.mp3' },
-    { key: 'W', id: 'Heater-2', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Heater-2.mp3' },
-    { key: 'E', id: 'Heater-3', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Heater-3.mp3' },
-    { key: 'A', id: 'Heater-4', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Heater-4.mp3' },
-    { key: 'S', id: 'Clap', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Clap.mp3' },
-    { key: 'D', id: 'Open-HH', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Open-HH.mp3' },
-    { key: 'Z', id: 'Kick-n\'-Hat', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Kick_n_Hat.mp3' },
-    { key: 'X', id: 'Kick', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Kick.mp3' },
-    { key: 'C', id: 'Closed-HH', audio: 'https://raw.githubusercontent.com/freeCodeCamp/cdn/main/build/testable-projects-fcc/audio/Closed-HH.mp3' }
+    { key: 'Q', id: 'Heater-1', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Heater-1.mp3' },
+    { key: 'W', id: 'Heater-2', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Heater-2.mp3' },
+    { key: 'E', id: 'Heater-3', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Heater-3.mp3' },
+    { key: 'A', id: 'Heater-4', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Heater-4.mp3' },
+    { key: 'S', id: 'Clap', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Clap.mp3' },
+    { key: 'D', id: 'Open-HH', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Open-HH.mp3' },
+    { key: 'Z', id: 'Kick-n\'-Hat', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Kick_n_Hat.mp3' },
+    { key: 'X', id: 'Kick', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Kick.mp3' },
+    { key: 'C', id: 'Closed-HH', audio: 'https://s3.amazonaws.com/freecodecamp/drums/Closed-HH.mp3' }
   ];
 
-  // Function to play drum sound and update display
+  // Function to play drum sound and update display - optimized for performance
   const playDrum = (drum) => {
     const audio = document.getElementById(drum.key);
-    if (audio) {
+    if (audio && audioLoaded) {
       // Update display immediately for better UX
       setDisplayText(drum.id);
       
-      // Reset audio to beginning and play
+      // Reset audio to beginning and play immediately
       audio.currentTime = 0;
       
-      // Try to play the audio with better error handling
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error(`Error playing audio for ${drum.key}:`, error);
-          // Audio failed but display is already updated
-        });
-      }
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error(`Error playing audio for ${drum.key}:`, error);
+          });
+        }
+      });
     }
   };
+
+  // Preload all audio files for better performance
+  useEffect(() => {
+    const preloadAudio = async () => {
+      try {
+        const audioPromises = drumData.map(drum => {
+          return new Promise((resolve, reject) => {
+            const audio = new Audio();
+            audio.preload = 'auto';
+            audio.src = drum.audio;
+            
+            audio.addEventListener('canplaythrough', () => resolve(), { once: true });
+            audio.addEventListener('error', () => reject(), { once: true });
+            
+            // Start loading
+            audio.load();
+          });
+        });
+        
+        await Promise.all(audioPromises);
+        setAudioLoaded(true);
+        console.log('All audio files preloaded successfully');
+      } catch (error) {
+        console.error('Error preloading audio:', error);
+        setAudioLoaded(true); // Still allow playback even if preloading fails
+      }
+    };
+    
+    preloadAudio();
+  }, []);
 
   // Handle keyboard events
   useEffect(() => {
@@ -54,12 +86,12 @@ const DrumMachine = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyPress);
     };
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, [audioLoaded]); // Re-run when audio is loaded
 
   return (
     <div id="drum-machine" className="drum-machine">
-      <div id="display" className="display">
-        {displayText}
+      <div id="display" className={`display ${!audioLoaded ? 'loading' : ''}`}>
+        {!audioLoaded ? 'Loading...' : displayText}
       </div>
       
       <div className="drum-pads">
@@ -76,6 +108,7 @@ const DrumMachine = () => {
               id={drum.key}
               src={drum.audio}
               preload="auto"
+              crossOrigin="anonymous"
             />
           </div>
         ))}

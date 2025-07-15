@@ -168,6 +168,21 @@
   animation: textGlow 0.5s ease-in-out;
 }
 
+/* Loading state - will be applied via JavaScript */
+.display.loading {
+  color: #ffaa00;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 @keyframes textGlow {
   0% {
     text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
